@@ -1,4 +1,4 @@
-# Microsoft 365 File Search MCP Server (SharePoint & OneDrive)
+# MCP Server - Microsoft 365 File Search  (SharePoint & OneDrive)
 
 ## Overview
 

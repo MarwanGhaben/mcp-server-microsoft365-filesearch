@@ -62,3 +62,23 @@ To integrate the server with Claude Desktop, update your `claude_desktop_config.
     }
   }
 }
+```
+
+## Microsoft Graph App Registration
+
+To use this server, you'll need to register an application in the [Azure Portal](https://portal.azure.com):
+
+1. Register a new application.
+2. Note down the **Client ID** and **Tenant ID**.
+3. Create a **Client Secret** under **Certificates & Secrets**.
+4. Under **API permissions**, add the following **delegated or application** permissions:
+   - `Sites.Read.All`
+   - `Files.Read.All`
+5. Click **Grant admin consent** for these permissions.
+
+Ensure these values are correctly set in your `env` configuration for the MCP server.
+
+## License
+
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).  
+You are free to use, modify, and distribute it with proper attribution.

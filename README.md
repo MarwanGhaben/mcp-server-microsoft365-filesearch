@@ -4,7 +4,8 @@
 
 A Model Context Protocol (MCP) server implementation that provides advanced file search capabilities within Microsoft 365. This server enables efficient file discovery, metadata analysis, and integration with business workflows by making available the content from SharePoint/OneDrive.
 
-<video controls src="assets/Microsoft365MCPServer.mp4" title="Title"></video>
+<video controls src="./assets/Microsoft365MCPServer.mp4" title="Title"></video>
+
 ## Components
 
 ### Tools

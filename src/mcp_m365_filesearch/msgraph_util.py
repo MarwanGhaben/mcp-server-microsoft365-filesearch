@@ -88,7 +88,7 @@ def classify_source(web_url):
         return "OneDrive"
     return "SharePoint"
 
-def download_file(drive_id, item_id, access_token):
+async def download_file(drive_id, item_id, access_token):
     logger.info(f"Downloading file with ID: {item_id} from drive: {drive_id}")
     headers = {"Authorization": f"Bearer {access_token}"}
     metadata_url = f"{GRAPH_URL}/drives/{drive_id}/items/{item_id}"
@@ -113,7 +113,7 @@ def download_file(drive_id, item_id, access_token):
         file_age = time.time() - os.path.getmtime(existing_file_path)
         if file_age < 24 * 3600:  # File is less than 24 hours old
             logger.info(f"Using existing file: {existing_file_path}")
-            return _read_file_content(existing_file_path)
+            return await _read_file_content(existing_file_path)
         else:
             logger.info(f"Deleting old file: {existing_file_path}")
             os.remove(existing_file_path)
@@ -129,12 +129,12 @@ def download_file(drive_id, item_id, access_token):
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         logger.info(f"File downloaded: {file_path}")
-        return _read_file_content(file_path)
+        return await _read_file_content(file_path)
     else:
         logger.error(f"Download failed: {response.status_code} - {response.text}")
         return None
 
-def _read_file_content(file_path):
+async def _read_file_content(file_path):
     """
     Read the content of the file using llamaindex SimpleDirectoryReader.
     Cache the processed documents object to a JSON file for reuse.

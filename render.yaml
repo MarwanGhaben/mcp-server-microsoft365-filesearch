@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: mcp-sharepoint-server
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python app.py"
+    envVars:
+      - key: CLIENT_ID
+        value: your-microsoft-client-id
+      - key: CLIENT_SECRET
+        value: your-microsoft-client-secret
+      - key: TENANT_ID
+        value: your-tenant-id
+      - key: AUTHORITY_URL
+        value: https://login.microsoftonline.com
+      - key: SCOPE
+        value: https://graph.microsoft.com/.default

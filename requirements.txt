@@ -7,3 +7,4 @@ pdfplumber
 python-pptx
 mcp-server
 llama-index
+uvicorn

@@ -6,11 +6,11 @@ services:
     startCommand: "python app.py"
     envVars:
       - key: CLIENT_ID
-        value: your-microsoft-client-id
+        sync: false
       - key: CLIENT_SECRET
-        value: your-microsoft-client-secret
+        sync: false
       - key: TENANT_ID
-        value: your-tenant-id
+        sync: false
       - key: AUTHORITY_URL
         value: https://login.microsoftonline.com
       - key: SCOPE

@@ -1,0 +1,8 @@
+flask
+requests
+msal
+python-docx
+openpyxl
+pdfplumber
+python-pptx
+Add required Python packages

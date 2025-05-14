@@ -43,14 +43,22 @@ def auth_login(request: Request):
 @app.get("/auth/callback")
 def auth_callback(request: Request):
     flow = request.session.get("flow")
+    if not flow:
+        return JSONResponse({"error": "Missing auth flow in session."}, status_code=400)
+
     result = _build_msal_app().acquire_token_by_auth_code_flow(flow, dict(request.query_params))
 
     if "error" in result:
         return JSONResponse({"error": result.get("error_description")}, status_code=400)
 
-    request.session["user"] = result.get("id_token_claims")
+    # ✅ Save user and token to session
+    request.session["user"] = {
+        "name": result.get("id_token_claims", {}).get("name", "Unknown"),
+        "email": result.get("id_token_claims", {}).get("preferred_username", "")
+    }
     request.session["access_token"] = result.get("access_token")
-    return RedirectResponse("/welcome")
+    
+    return RedirectResponse("/")
 
 @app.get("/me/files")
 def list_my_files(request: Request):

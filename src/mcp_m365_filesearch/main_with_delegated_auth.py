@@ -30,7 +30,7 @@ CLIENT_SECRET = os.getenv("DELEGATED_CLIENT_SECRET")
 TENANT_ID = os.getenv("DELEGATED_TENANT_ID")
 REDIRECT_URI = os.getenv("DELEGATED_REDIRECT_URI", "https://localhost:8000/auth/callback")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
-SCOPE = ["User.Read", "Files.Read.All", "openid", "profile", "email"]
+SCOPE = ["User.Read", "Files.Read.All", "offline_access"]
 
 @app.get("/")
 def home(request: Request):

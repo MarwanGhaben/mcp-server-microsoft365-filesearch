@@ -1,47 +1,51 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
-from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import HTMLResponse
+from fastapi.middleware.sessions import SessionMiddleware
+from starlette.middleware import Middleware
 import os
 import msal
 import requests
+from dotenv import load_dotenv
 
-from .msgraph_util import (
+# Load environment variables
+load_dotenv()
+
+from msgraph_util import (
     search_graph,
     parse_search_response,
     download_file,
     crawl_drive_items
 )
-from .msal_auth import get_token_client_credentials
+from msal_auth import get_token_client_credentials
 
+# Setup app and middleware
 app = FastAPI()
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=os.getenv("SESSION_SECRET_KEY", "supersecretkey@2025!"),
-    same_site="none",          # ⚠️ VERY IMPORTANT for OAuth on HTTPS
-    https_only=True,           # Ensures cookie is marked secure
-    session_cookie="auth"      # Optional, makes debugging easier
-)
 
+SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY", "supersecretkey@2025!")
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET_KEY)
 
 # ENV config for delegated auth
 CLIENT_ID = os.getenv("DELEGATED_CLIENT_ID")
 CLIENT_SECRET = os.getenv("DELEGATED_CLIENT_SECRET")
 TENANT_ID = os.getenv("DELEGATED_TENANT_ID")
-REDIRECT_URI = os.environ["DELEGATED_REDIRECT_URI"]
+REDIRECT_URI = os.getenv("DELEGATED_REDIRECT_URI", "https://localhost:8000/auth/callback")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
-SCOPE = ["User.Read", "Files.Read.All"]
+SCOPE = ["User.Read", "Files.Read.All", "openid", "profile", "email"]
 
 @app.get("/")
 def home(request: Request):
-    print("🔍 Session:", request.session)  # 👈 ADD THIS
-
-    if request.session.get("user"):
+    user = request.session.get("user")
+    if user:
         return HTMLResponse(f"""
-            <h3>✅ Welcome {request.session['user'].get('name')}</h3>
-            <a href='/me/files'>View My OneDrive</a>
+            <h3>✅ Welcome {user.get('name')}</h3>
+            <p>You're signed in as {user.get('email')}</p>
+            <a href='/me/files'>📁 View My OneDrive</a><br>
+            <a href='/logout'>🚪 Logout</a>
         """)
-    return HTMLResponse("<h3>❌ No user is signed in.</h3><a href='/auth/login'>Sign in with Microsoft</a>")
+    return HTMLResponse("""
+        <h3>❌ No user is signed in.</h3>
+        <a href='/auth/login'>🔐 Sign in with Microsoft</a>
+    """)
 
 @app.get("/auth/login")
 def auth_login(request: Request):
@@ -55,18 +59,25 @@ def auth_callback(request: Request):
     if not flow:
         return JSONResponse({"error": "Missing auth flow in session."}, status_code=400)
 
-    result = _build_msal_app().acquire_token_by_auth_code_flow(flow, dict(request.query_params))
+    try:
+        result = _build_msal_app().acquire_token_by_auth_code_flow(flow, dict(request.query_params))
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
     if "error" in result:
         return JSONResponse({"error": result.get("error_description")}, status_code=400)
 
-    # ✅ Save user and token to session
     request.session["user"] = {
         "name": result.get("id_token_claims", {}).get("name", "Unknown"),
         "email": result.get("id_token_claims", {}).get("preferred_username", "")
     }
     request.session["access_token"] = result.get("access_token")
-    
+
+    return RedirectResponse("/")
+
+@app.get("/logout")
+def logout(request: Request):
+    request.session.clear()
     return RedirectResponse("/")
 
 @app.get("/me/files")
@@ -100,11 +111,3 @@ def _build_auth_code_flow():
         scopes=SCOPE,
         redirect_uri=REDIRECT_URI
     )
-    
-@app.get("/welcome")
-def welcome(request: Request):
-    user = request.session.get("user")
-    if user:
-        name = user.get("name", "there")
-        return HTMLResponse(f"<h3>✅ Welcome {name}!</h3><p>You are now signed in.</p>")
-    return HTMLResponse("<p>❌ No user is signed in.</p>")

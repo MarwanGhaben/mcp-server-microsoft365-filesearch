@@ -111,6 +111,24 @@ def list_my_files(request: Request):
 
     return JSONResponse(rsp.json(), status_code=rsp.status_code)
 
+@app.get("/drive/list")
+def list_drive(upn: str):
+    """
+    List the files/folders in the root of a user's OneDrive
+    using the app-only (client-credential) token.
+    Query param:
+        upn = user principal name, e.g. marwan@ghaben.ca
+    """
+    token = get_token_client_credentials()        # you already have this helper
+    if not token:
+        return JSONResponse({"error": "Auth failed"}, status_code=401)
+
+    headers = {"Authorization": f"Bearer {token}"}
+    url = f"https://graph.microsoft.com/v1.0/users/{upn}/drive/root/children"
+
+    rsp = requests.get(url, headers=headers, timeout=10)
+    return JSONResponse(rsp.json(), status_code=rsp.status_code)
+
 # ------------------
 # MSAL helper funcs
 # ------------------

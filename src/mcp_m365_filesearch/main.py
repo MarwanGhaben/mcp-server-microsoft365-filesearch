@@ -8,7 +8,7 @@ import logging
 app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 
-VALID_REGIONS = {"NAM", "EUR", "APC", "AUS", "IND"}
+VALID_REGIONS = {"NAM", "EUR", "APC", "AUS", "IND", "CAN"}
 REGION = os.getenv("REGION", "NAM").upper()
 print(f"⚠️ DEBUG: REGION detected: {REGION}")
 if REGION not in VALID_REGIONS:

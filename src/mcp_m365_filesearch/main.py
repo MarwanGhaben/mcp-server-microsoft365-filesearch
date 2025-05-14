@@ -55,13 +55,19 @@ async def search_m365_files(
     return {"count": len(results), "files": results}
 
 @app.get("/get_file_content")
-async def get_file_content(driveid: str, fileid: str):
+async def get_file_content(
+    driveid: str,
+    fileid: str,
+    offset: int = 0,
+    limit: int = 50
+):
     access_token = get_token_client_credentials()
     if not access_token:
         return JSONResponse(status_code=401, content={"error": "Failed to authenticate with Microsoft Graph."})
 
     try:
-        content = await download_file(driveid, fileid, access_token)
+        content = await download_file(driveid, fileid, access_token, offset=offset, limit=limit)
         return {"content": content}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+

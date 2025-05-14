@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import HTMLResponse
 import os
@@ -50,7 +50,7 @@ def auth_callback(request: Request):
 
     request.session["user"] = result.get("id_token_claims")
     request.session["access_token"] = result.get("access_token")
-    return RedirectResponse("/")
+    return RedirectResponse("/welcome")
 
 @app.get("/me/files")
 def list_my_files(request: Request):
@@ -83,3 +83,11 @@ def _build_auth_code_flow():
         scopes=SCOPE,
         redirect_uri=REDIRECT_URI
     )
+    
+@app.get("/welcome")
+def welcome(request: Request):
+    user = request.session.get("user")
+    if user:
+        name = user.get("name", "there")
+        return HTMLResponse(f"<h3>✅ Welcome {name}!</h3><p>You are now signed in.</p>")
+    return HTMLResponse("<p>❌ No user is signed in.</p>")

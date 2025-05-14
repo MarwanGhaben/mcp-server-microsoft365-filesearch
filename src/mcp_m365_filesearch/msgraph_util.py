@@ -91,12 +91,11 @@ def classify_source(web_url):
         return "OneDrive"
     return "SharePoint"
 
-async def download_file(drive_id, item_id, access_token):
+async def download_file(drive_id, item_id, access_token, offset=0, limit=50):
     logger.info(f"Downloading file with ID: {item_id} from drive: {drive_id}")
     headers = {"Authorization": f"Bearer {access_token}"}
     metadata_url = f"{GRAPH_URL}/drives/{drive_id}/items/{item_id}"
 
-    # Fetch metadata to get the file name
     metadata_response = requests.get(metadata_url, headers=headers)
     if metadata_response.status_code == 200:
         metadata = metadata_response.json()
@@ -110,14 +109,13 @@ async def download_file(drive_id, item_id, access_token):
     item_folder = os.path.join(local_dir, "downloads", drive_id, item_id)
     os.makedirs(item_folder, exist_ok=True)
 
-    # Check if already downloaded
     existing_files = os.listdir(item_folder)
     if existing_files:
         existing_file_path = os.path.join(item_folder, existing_files[0])
         file_age = time.time() - os.path.getmtime(existing_file_path)
         if file_age < 24 * 3600:
             logger.info(f"Using cached file: {existing_file_path}")
-            return await _read_file_content(existing_file_path)
+            return await _read_file_content(existing_file_path, offset=offset, limit=limit)
         else:
             logger.info(f"Deleting old file: {existing_file_path}")
             os.remove(existing_file_path)
@@ -131,19 +129,15 @@ async def download_file(drive_id, item_id, access_token):
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         logger.info(f"File downloaded: {file_path}")
-        return await _read_file_content(file_path)
+        return await _read_file_content(file_path, offset=offset, limit=limit)
     else:
         logger.error(f"Download failed: {response.status_code} - {response.text}")
         return None
 
 # ----------------------
-# File Reader + Caching
+# File Reader + Pagination
 # ----------------------
-async def _read_file_content(file_path):
-    """
-    Try to use LlamaIndex to read file content.
-    Fallback to manual parsing for .docx and .xlsx if needed.
-    """
+async def _read_file_content(file_path, offset=0, limit=50):
     try:
         cache_path = f"{file_path}.cache.json"
         if os.path.exists(cache_path):
@@ -153,7 +147,6 @@ async def _read_file_content(file_path):
                 with open(cache_path, "r", encoding="utf-8") as f:
                     return json.load(f)
 
-        # Try LlamaIndex first
         try:
             reader = SimpleDirectoryReader(input_files=[file_path])
             docs = reader.load_data()
@@ -165,17 +158,24 @@ async def _read_file_content(file_path):
         except Exception as e:
             logger.warning(f"LlamaIndex failed, trying fallback: {e}")
 
-        # Fallback: DOCX/XLSX manual parsing
         text_output = ""
         if file_path.endswith(".docx"):
             doc = Document(file_path)
             text_output = "\n".join([p.text for p in doc.paragraphs])
+
         elif file_path.endswith(".xlsx"):
             wb = openpyxl.load_workbook(file_path, data_only=True)
             chunks = []
             for sheet in wb.worksheets:
                 chunks.append(f"--- Sheet: {sheet.title} ---")
-                for row in sheet.iter_rows(values_only=True):
+                start = offset
+                end = offset + limit
+                for i, row in enumerate(sheet.iter_rows(values_only=True)):
+                    if i < start:
+                        continue
+                    if i >= end:
+                        chunks.append(f"[... {limit} rows shown. Use offset={offset+limit} to continue ...]")
+                        break
                     row_text = [str(cell) if cell else "" for cell in row]
                     chunks.append(" | ".join(row_text))
             text_output = "\n".join(chunks)

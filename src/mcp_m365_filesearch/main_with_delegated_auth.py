@@ -17,10 +17,12 @@ from .msal_auth import get_token_client_credentials
 app = FastAPI()
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.getenv("SESSION_SECRET_KEY", "fallback_default"),
-    same_site="lax",  # Required for OAuth redirect flow to work
-    https_only=True   # Forces cookie over HTTPS
+    secret_key=os.getenv("SESSION_SECRET_KEY", "supersecretkey@2025!"),
+    same_site="none",          # ⚠️ VERY IMPORTANT for OAuth on HTTPS
+    https_only=True,           # Ensures cookie is marked secure
+    session_cookie="auth"      # Optional, makes debugging easier
 )
+
 
 # ENV config for delegated auth
 CLIENT_ID = os.getenv("DELEGATED_CLIENT_ID")

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse, JSONResponse
-from fastapi.middleware.sessions import SessionMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import HTMLResponse
 import os
 import msal

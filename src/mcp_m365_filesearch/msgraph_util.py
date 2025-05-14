@@ -87,7 +87,7 @@ def parse_search_response(search_results, file_type, file_extension):
 # ----------------------
 def classify_source(web_url):
     logger.debug(f"Classifying source for URL: {web_url}")
-    if "-my.sharepoint.com" in web_url or "/personal/" in web_url:
+    if "my.sharepoint.com/personal/" in web_url:
         return "OneDrive"
     return "SharePoint"
 
@@ -191,3 +191,39 @@ async def _read_file_content(file_path, offset=0, limit=50):
     except Exception as e:
         logger.error(f"Failed to read file: {e}")
         return None
+
+# ----------------------
+# Manual SharePoint Crawler
+# ----------------------
+def crawl_drive_items(access_token, drive_id, parent_id=None, file_extension=None):
+    logger.info(f"Starting manual crawl for drive {drive_id} with filter: {file_extension}")
+    headers = {"Authorization": f"Bearer {access_token}"}
+    url = f"{GRAPH_URL}/drives/{drive_id}/items/{parent_id}/children" if parent_id else f"{GRAPH_URL}/drives/{drive_id}/root/children"
+
+    results = []
+    while url:
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            logger.error(f"Failed to crawl drive: {response.status_code} - {response.text}")
+            break
+
+        data = response.json()
+        for item in data.get("value", []):
+            if "file" in item:
+                if file_extension is None or item["name"].lower().endswith(file_extension.lower()):
+                    results.append({
+                        "name": item["name"],
+                        "id": item["id"],
+                        "webUrl": item.get("webUrl"),
+                        "driveId": item.get("parentReference", {}).get("driveId")
+                    })
+            elif "folder" in item:
+                # Recursive crawl inside subfolder
+                child_id = item["id"]
+                child_items = crawl_drive_items(access_token, drive_id, child_id, file_extension)
+                results.extend(child_items)
+
+        # Pagination
+        url = data.get("@odata.nextLink")
+
+    return results

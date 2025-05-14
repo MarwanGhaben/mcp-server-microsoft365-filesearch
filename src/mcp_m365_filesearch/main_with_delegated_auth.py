@@ -21,7 +21,7 @@ app.add_middleware(SessionMiddleware, secret_key=os.urandom(24))
 CLIENT_ID = os.getenv("DELEGATED_CLIENT_ID")
 CLIENT_SECRET = os.getenv("DELEGATED_CLIENT_SECRET")
 TENANT_ID = os.getenv("DELEGATED_TENANT_ID")
-REDIRECT_URI = os.getenv("DELEGATED_REDIRECT_URI", "http://localhost:8000/auth/callback")
+REDIRECT_URI = os.environ["DELEGATED_REDIRECT_URI"]
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 SCOPE = ["User.Read", "Files.Read.All"]
 

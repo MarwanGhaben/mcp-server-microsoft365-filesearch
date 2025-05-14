@@ -7,7 +7,7 @@ from io import BytesIO
 from docx import Document
 import openpyxl
 from llama_index.core import SimpleDirectoryReader
-from logger_config import setup_logger
+from .logger_config import setup_logger
 
 # Initialize logger
 logger = setup_logger()

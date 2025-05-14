@@ -1,4 +1,4 @@
-from mcp_m365_filesearch.server import server
+# from mcp_m365_filesearch.server import server
 import os
 import sys
 

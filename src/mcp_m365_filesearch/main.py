@@ -63,11 +63,18 @@ async def get_file_content(
 ):
     access_token = get_token_client_credentials()
     if not access_token:
-        return JSONResponse(status_code=401, content={"error": "Failed to authenticate with Microsoft Graph."})
+        return JSONResponse(status_code=401, content="Authentication failed.")
 
     try:
         content = await download_file(driveid, fileid, access_token, offset=offset, limit=limit)
-        return {"content": content}
+
+        # If content is a list with 'text' keys, flatten it to just raw text
+        if isinstance(content, list) and len(content) > 0 and "text" in content[0]:
+            return {"content": content[0]["text"]}
+        elif isinstance(content, str):
+            return {"content": content}
+        else:
+            return {"content": "[No readable content found]"}
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        return JSONResponse(status_code=500, content=f"Error: {str(e)}")
 

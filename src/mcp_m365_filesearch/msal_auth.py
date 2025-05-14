@@ -1,6 +1,6 @@
 from msal import ConfidentialClientApplication
 import os
-from logger_config import setup_logger
+from .logger_config import setup_logger
 
 # Initialize logger
 logger = setup_logger()

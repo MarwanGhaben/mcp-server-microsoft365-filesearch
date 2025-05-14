@@ -6,13 +6,13 @@ import os
 import msal
 import requests
 
-from msgraph_util import (
+from .msgraph_util import (
     search_graph,
     parse_search_response,
     download_file,
     crawl_drive_items
 )
-from msal_auth import get_token_client_credentials
+from .msal_auth import get_token_client_credentials
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=os.urandom(24))

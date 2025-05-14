@@ -112,19 +112,20 @@ def list_my_files(request: Request):
     return JSONResponse(rsp.json(), status_code=rsp.status_code)
 
 @app.get("/drive/list")
-def list_drive(upn: str):
+def list_drive(upn: str, max_items: int = 50):
     """
-    List the files/folders in the root of a user's OneDrive
-    using the app-only (client-credential) token.
-    Query param:
-        upn = user principal name, e.g. marwan@ghaben.ca
+    List up to `max_items` items in the root of a user's OneDrive.
+    - upn: user principal name (email)
+    - max_items: 1 – 500; defaults to 50
     """
-    token = get_token_client_credentials()        # you already have this helper
+    max_items = max(1, min(max_items, 500))   # cap 1-500
+
+    token = get_token_client_credentials()
     if not token:
         return JSONResponse({"error": "Auth failed"}, status_code=401)
 
     headers = {"Authorization": f"Bearer {token}"}
-    url = f"https://graph.microsoft.com/v1.0/users/{upn}/drive/root/children"
+    url = f"https://graph.microsoft.com/v1.0/users/{upn}/drive/root/children?$top={max_items}"
 
     rsp = requests.get(url, headers=headers, timeout=10)
     return JSONResponse(rsp.json(), status_code=rsp.status_code)

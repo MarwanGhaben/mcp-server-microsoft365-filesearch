@@ -174,7 +174,7 @@ async def _read_file_content(file_path, offset=0, limit=50):
                     if i < start:
                         continue
                     if i >= end:
-                        chunks.append(f"[... {limit} rows shown. Use offset={offset+limit} to continue ...]")
+                        chunks.append(f"[... {limit} rows shown. Use offset={offset + limit} to continue ...]")
                         break
                     row_text = [str(cell) if cell else "" for cell in row]
                     chunks.append(" | ".join(row_text))

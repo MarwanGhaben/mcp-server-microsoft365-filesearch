@@ -1,15 +1,18 @@
 import os
 import requests
 import time
-import json  # For saving and loading the documents object as JSON
+import json
+import mimetypes
+from io import BytesIO
+from docx import Document
+import openpyxl
 from llama_index.core import SimpleDirectoryReader
 from logger_config import setup_logger
 
 # Initialize logger
 logger = setup_logger()
 
-# Microsoft Graph API URL
-GRAPH_URL = "https://graph.microsoft.com/v1.0"  
+GRAPH_URL = "https://graph.microsoft.com/v1.0"
 
 # ----------------------
 # Graph Search
@@ -101,28 +104,27 @@ async def download_file(drive_id, item_id, access_token):
     else:
         logger.error(f"Failed to fetch metadata: {metadata_response.status_code} - {metadata_response.text}")
         return None
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
     local_dir = os.path.join(current_dir, ".local")
     item_folder = os.path.join(local_dir, "downloads", drive_id, item_id)
     os.makedirs(item_folder, exist_ok=True)
 
-    # Check if the folder contains a file
+    # Check if already downloaded
     existing_files = os.listdir(item_folder)
     if existing_files:
         existing_file_path = os.path.join(item_folder, existing_files[0])
         file_age = time.time() - os.path.getmtime(existing_file_path)
-        if file_age < 24 * 3600:  # File is less than 24 hours old
-            logger.info(f"Using existing file: {existing_file_path}")
+        if file_age < 24 * 3600:
+            logger.info(f"Using cached file: {existing_file_path}")
             return await _read_file_content(existing_file_path)
         else:
             logger.info(f"Deleting old file: {existing_file_path}")
             os.remove(existing_file_path)
 
-    # Full file path for the new file
     file_path = os.path.join(item_folder, file_name)
-
-    # Download the file
     content_url = f"{metadata_url}/content"
+
     response = requests.get(content_url, headers=headers, stream=True)
     if response.status_code == 200:
         with open(file_path, "wb") as f:
@@ -134,42 +136,58 @@ async def download_file(drive_id, item_id, access_token):
         logger.error(f"Download failed: {response.status_code} - {response.text}")
         return None
 
+# ----------------------
+# File Reader + Caching
+# ----------------------
 async def _read_file_content(file_path):
     """
-    Read the content of the file using llamaindex SimpleDirectoryReader.
-    Cache the processed documents object to a JSON file for reuse.
+    Try to use LlamaIndex to read file content.
+    Fallback to manual parsing for .docx and .xlsx if needed.
     """
     try:
-        # Define the path for the cached documents object
-        cache_file_path = f"{file_path}.cache.json"
+        cache_path = f"{file_path}.cache.json"
+        if os.path.exists(cache_path):
+            age = time.time() - os.path.getmtime(cache_path)
+            if age < 24 * 3600:
+                logger.info(f"Using cached content: {cache_path}")
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
 
-        # Check if the cache file exists and is not older than 24 hours
-        if os.path.exists(cache_file_path):
-            cache_age = time.time() - os.path.getmtime(cache_file_path)
-            if cache_age < 24 * 3600:  # Cache is less than 24 hours old
-                logger.info(f"Using cached documents from: {cache_file_path}")
-                with open(cache_file_path, "r", encoding="utf-8") as cache_file:
-                    documents = json.load(cache_file)
-                return documents  # Return the entire documents object
+        # Try LlamaIndex first
+        try:
+            reader = SimpleDirectoryReader(input_files=[file_path])
+            docs = reader.load_data()
+            if docs:
+                serialized = [{"text": doc.text, **doc.metadata} for doc in docs]
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    json.dump(serialized, f, ensure_ascii=False, indent=4)
+                return serialized
+        except Exception as e:
+            logger.warning(f"LlamaIndex failed, trying fallback: {e}")
 
-        # Process the file content if no valid cache exists
-        reader = SimpleDirectoryReader(input_files=[file_path])
-        documents = reader.load_data()
-        logger.info("File processed using SimpleDirectoryReader.")
+        # Fallback: DOCX/XLSX manual parsing
+        text_output = ""
+        if file_path.endswith(".docx"):
+            doc = Document(file_path)
+            text_output = "\n".join([p.text for p in doc.paragraphs])
+        elif file_path.endswith(".xlsx"):
+            wb = openpyxl.load_workbook(file_path, data_only=True)
+            chunks = []
+            for sheet in wb.worksheets:
+                chunks.append(f"--- Sheet: {sheet.title} ---")
+                for row in sheet.iter_rows(values_only=True):
+                    row_text = [str(cell) if cell else "" for cell in row]
+                    chunks.append(" | ".join(row_text))
+            text_output = "\n".join(chunks)
 
-        if documents:
-            # Convert documents to a serializable format
-            serializable_documents = [{"text": doc.text, **doc.metadata} for doc in documents]
-
-            # Save the documents object to the cache file as JSON
-            with open(cache_file_path, "w", encoding="utf-8") as cache_file:
-                json.dump(serializable_documents, cache_file, ensure_ascii=False, indent=4)
-            logger.debug(f"Processed documents cached at: {cache_file_path}")
-            return serializable_documents  # Return the entire documents object
+        if text_output:
+            result = [{"text": text_output, "source": "manual"}]
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False, indent=4)
+            return result
         else:
-            logger.warning("No documents found in the file.")
-            return None
-    except Exception as e:
-        logger.error(f"Failed to process file using SimpleDirectoryReader: {e}")
-        return None
+            return [{"text": "[No readable text found]", "source": "manual"}]
 
+    except Exception as e:
+        logger.error(f"Failed to read file: {e}")
+        return None

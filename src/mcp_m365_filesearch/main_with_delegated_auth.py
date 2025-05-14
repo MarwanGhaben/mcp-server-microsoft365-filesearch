@@ -77,8 +77,7 @@ def auth_callback(request: Request):
         "name": result.get("id_token_claims", {}).get("name", "Unknown"),
         "email": result.get("id_token_claims", {}).get("preferred_username", "")
     }
-    request.session["access_token"] = result.get("access_token")
-
+    
     return RedirectResponse("/")
 
 @app.get("/logout")
@@ -88,18 +87,23 @@ def logout(request: Request):
 
 @app.get("/me/files")
 def list_my_files(request: Request):
-    access_token = request.session.get("access_token")
-    if not access_token:
+    # ▸ never rely on cookie-stored access_token now
+    # ▸ instead, use MSAL’s token cache to silently get a fresh one
+    user = request.session.get("user")
+    if not user:
         return RedirectResponse("/auth/login")
 
-    headers = {"Authorization": f"Bearer {access_token}"}
-    url = "https://graph.microsoft.com/v1.0/me/drive/root/children"
-    response = requests.get(url, headers=headers)
+    result = _build_msal_app().acquire_token_silent(GRAPH_SCOPES, account=None)
+    if "access_token" not in result:
+        return RedirectResponse("/auth/login")  # refresh needed
 
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return JSONResponse({"error": response.text}, status_code=response.status_code)
+    headers = {"Authorization": f"Bearer {result['access_token']}"}
+    rsp = requests.get(
+        "https://graph.microsoft.com/v1.0/me/drive/root/children",
+        headers=headers,
+        timeout=10,
+    )
+    return JSONResponse(rsp.json(), status_code=rsp.status_code)
 
 # ------------------
 # MSAL helper funcs

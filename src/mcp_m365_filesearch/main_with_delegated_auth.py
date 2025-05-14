@@ -27,12 +27,14 @@ SCOPE = ["User.Read", "Files.Read.All"]
 
 @app.get("/")
 def home(request: Request):
+    print("🔍 Session:", request.session)  # 👈 ADD THIS
+
     if request.session.get("user"):
         return HTMLResponse(f"""
-            <h3>Welcome {request.session['user'].get('name')}</h3>
+            <h3>✅ Welcome {request.session['user'].get('name')}</h3>
             <a href='/me/files'>View My OneDrive</a>
         """)
-    return HTMLResponse("<a href='/auth/login'>Sign in with Microsoft</a>")
+    return HTMLResponse("<h3>❌ No user is signed in.</h3><a href='/auth/login'>Sign in with Microsoft</a>")
 
 @app.get("/auth/login")
 def auth_login(request: Request):

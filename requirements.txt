@@ -9,3 +9,4 @@ mcp-server
 llama-index
 uvicorn
 fastapi
+docx2txt

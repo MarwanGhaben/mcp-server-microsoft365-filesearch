@@ -85,24 +85,30 @@ def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/")
 
+GRAPH_SCOPES = ["User.Read", "Files.Read.All"]
+
 @app.get("/me/files")
 def list_my_files(request: Request):
-    # ▸ never rely on cookie-stored access_token now
-    # ▸ instead, use MSAL’s token cache to silently get a fresh one
     user = request.session.get("user")
     if not user:
+        # No cookie = not logged in
         return RedirectResponse("/auth/login")
 
+    # 👉 Pull a token from MSAL’s cache (or refresh silently)
     result = _build_msal_app().acquire_token_silent(GRAPH_SCOPES, account=None)
-    if "access_token" not in result:
-        return RedirectResponse("/auth/login")  # refresh needed
 
+    if not result or "access_token" not in result:
+        # Cache miss -> force the user through interactive auth again
+        return RedirectResponse("/auth/login")
+
+    # Call Graph with the access token
     headers = {"Authorization": f"Bearer {result['access_token']}"}
     rsp = requests.get(
         "https://graph.microsoft.com/v1.0/me/drive/root/children",
         headers=headers,
         timeout=10,
     )
+
     return JSONResponse(rsp.json(), status_code=rsp.status_code)
 
 # ------------------

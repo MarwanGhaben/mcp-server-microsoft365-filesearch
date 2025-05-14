@@ -15,7 +15,7 @@ from .msgraph_util import (
 from .msal_auth import get_token_client_credentials
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=os.urandom(24))
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET_KEY", "fallback_default"))
 
 # ENV config for delegated auth
 CLIENT_ID = os.getenv("DELEGATED_CLIENT_ID")

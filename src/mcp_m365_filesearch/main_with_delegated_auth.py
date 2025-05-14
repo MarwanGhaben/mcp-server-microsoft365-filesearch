@@ -30,7 +30,7 @@ CLIENT_SECRET = os.getenv("DELEGATED_CLIENT_SECRET")
 TENANT_ID = os.getenv("DELEGATED_TENANT_ID")
 REDIRECT_URI = os.getenv("DELEGATED_REDIRECT_URI", "https://localhost:8000/auth/callback")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
-SCOPE = ["User.Read", "Files.Read.All", "offline_access"]
+GRAPH_SCOPES = ["User.Read", "Files.Read.All"]
 
 @app.get("/")
 def home(request: Request):
@@ -108,6 +108,6 @@ def _build_msal_app():
 
 def _build_auth_code_flow():
     return _build_msal_app().initiate_auth_code_flow(
-        scopes=SCOPE,
+        scopes=GRAPH_SCOPES,
         redirect_uri=REDIRECT_URI
     )

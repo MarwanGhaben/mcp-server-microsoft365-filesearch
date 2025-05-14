@@ -15,7 +15,12 @@ from .msgraph_util import (
 from .msal_auth import get_token_client_credentials
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET_KEY", "fallback_default"))
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SESSION_SECRET_KEY", "fallback_default"),
+    same_site="lax",  # Required for OAuth redirect flow to work
+    https_only=True   # Forces cookie over HTTPS
+)
 
 # ENV config for delegated auth
 CLIENT_ID = os.getenv("DELEGATED_CLIENT_ID")

@@ -22,7 +22,13 @@ from .msal_auth import get_token_client_credentials
 app = FastAPI()
 
 SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY", "supersecretkey@2025!")
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET_KEY)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SESSION_SECRET_KEY,
+    session_cookie="maroo_session",
+    same_site="lax",              # or "none" if using custom domain + HTTPS
+    https_only=True,              # Important on Render!
+)
 
 # ENV config for delegated auth
 CLIENT_ID = os.getenv("DELEGATED_CLIENT_ID")

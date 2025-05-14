@@ -10,13 +10,13 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from msgraph_util import (
+from .msgraph_util import (
     search_graph,
     parse_search_response,
     download_file,
     crawl_drive_items
 )
-from msal_auth import get_token_client_credentials
+from .msal_auth import get_token_client_credentials
 
 # Setup app and middleware
 app = FastAPI()

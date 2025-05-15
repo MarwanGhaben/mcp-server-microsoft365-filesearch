@@ -130,6 +130,29 @@ def list_drive(upn: str, max_items: int = 50):
     rsp = requests.get(url, headers=headers, timeout=10)
     return JSONResponse(rsp.json(), status_code=rsp.status_code)
 
+@app.get("/drive/children")
+def list_children(upn: str, parent_id: str, max_items: int = 50):
+    """
+    List up to `max_items` items inside a OneDrive folder.
+    Args:
+      upn        – user principal name (e.g. marwan@ghaben.ca)
+      parent_id  – the folder’s driveItem ID (from a previous listing)
+      max_items  – limit 1-500 (default 50)
+    """
+    max_items = max(1, min(max_items, 500))
+    token = get_token_client_credentials()
+    if not token:
+        return JSONResponse({"error": "Auth failed"}, status_code=401)
+
+    headers = {"Authorization": f"Bearer {token}"}
+    url = (
+        f"https://graph.microsoft.com/v1.0/"
+        f"users/{upn}/drive/items/{parent_id}/children?$top={max_items}"
+    )
+
+    rsp = requests.get(url, headers=headers, timeout=10)
+    return JSONResponse(rsp.json(), status_code=rsp.status_code)
+
 # ------------------
 # MSAL helper funcs
 # ------------------

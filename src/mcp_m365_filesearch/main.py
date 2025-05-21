@@ -78,23 +78,20 @@ def crawl_files(driveid: str, file_extension: str = None):
 
 import requests
 from fastapi import FastAPI, Query
-from typing import Optional
 
 app = FastAPI()
 
-# Hardcoded mapping from friendly site name to SharePoint site ID
 SITE_NAME_TO_ID = {
     "Mazoo": "marwanmostafa.sharepoint.com,121f66a5-f7c5-4f4b-839a-74bd313275e4,78f6f561-fcb0-4138-bef1-7f119aabc8aa"
 }
 
 def get_token_client_credentials():
-    # Placeholder: Implement your authentication logic here to return a valid token
-    # For example, use MSAL or any method you currently use to get the access token
-    raise NotImplementedError("Replace this with your token acquisition code.")
+    # TODO: Replace with your actual token retrieval
+    raise NotImplementedError("Implement your real token logic here.")
 
 @app.get("/search_site")
 def search_files_in_site(
-    site_name: str = Query(..., description="Friendly name of SharePoint site, e.g., Mazoo"),
+    site_name: str = Query(..., description="Site name, e.g., Mazoo"),
     query: str = Query(..., description="Text to search for in files"),
     max_results: int = Query(10, description="Maximum number of results to return")
 ):
@@ -102,12 +99,11 @@ def search_files_in_site(
     if not access_token:
         return {"count": 0, "files": [], "message": "Authentication failed."}
 
-    # Hardcoded lookup for Mazoo
+    # Hardcoded mapping
     site_id = SITE_NAME_TO_ID.get(site_name)
     if not site_id:
         return {"count": 0, "files": [], "message": f"Unknown site name: {site_name}"}
 
-    # Call Microsoft Graph API for the specific site
     url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drive/root/search(q='{query}')"
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.get(url, headers=headers)
@@ -120,8 +116,6 @@ def search_files_in_site(
             "name": item.get("name"),
             "id": item.get("id"),
             "webUrl": item.get("webUrl")
-        }
-        for item in items
+        } for item in items
     ]
-    # Return the result
     return {"count": len(files), "files": files}

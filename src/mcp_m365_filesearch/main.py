@@ -76,36 +76,52 @@ def crawl_files(driveid: str, file_extension: str = None):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-from .msgraph_util import SITE_NAME_TO_ID
+import requests
+from fastapi import FastAPI, Query
+from typing import Optional
+
+app = FastAPI()
+
+# Hardcoded mapping from friendly site name to SharePoint site ID
+SITE_NAME_TO_ID = {
+    "Mazoo": "marwanmostafa.sharepoint.com,121f66a5-f7c5-4f4b-839a-74bd313275e4,78f6f561-fcb0-4138-bef1-7f119aabc8aa"
+}
+
+def get_token_client_credentials():
+    # Placeholder: Implement your authentication logic here to return a valid token
+    # For example, use MSAL or any method you currently use to get the access token
+    raise NotImplementedError("Replace this with your token acquisition code.")
 
 @app.get("/search_site")
-async def search_files_in_site(
-    site_name: str,
-    query: str,
-    max_results: int = 10
+def search_files_in_site(
+    site_name: str = Query(..., description="Friendly name of SharePoint site, e.g., Mazoo"),
+    query: str = Query(..., description="Text to search for in files"),
+    max_results: int = Query(10, description="Maximum number of results to return")
 ):
     access_token = get_token_client_credentials()
     if not access_token:
         return {"count": 0, "files": [], "message": "Authentication failed."}
+
+    # Hardcoded lookup for Mazoo
     site_id = SITE_NAME_TO_ID.get(site_name)
     if not site_id:
         return {"count": 0, "files": [], "message": f"Unknown site name: {site_name}"}
+
+    # Call Microsoft Graph API for the specific site
+    url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drive/root/search(q='{query}')"
     headers = {"Authorization": f"Bearer {access_token}"}
-    search_url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drive/root/search(q='{query}')"
-    response = requests.get(search_url, headers=headers)
+    response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        return {
-            "count": 0,
-            "files": [],
-            "message": f"Search failed: {response.status_code} {response.text}"
-        }
+        return {"count": 0, "files": [], "message": f"Search failed: {response.status_code} {response.text}"}
+
     items = response.json().get("value", [])
     files = [
         {
-            "title": item.get("name"),
-            "summary": "File found in SharePoint",
-            "link": item.get("webUrl")
+            "name": item.get("name"),
+            "id": item.get("id"),
+            "webUrl": item.get("webUrl")
         }
         for item in items
     ]
+    # Return the result
     return {"count": len(files), "files": files}

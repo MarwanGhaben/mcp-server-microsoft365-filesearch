@@ -95,19 +95,26 @@ def search_files_in_site(
     query: str = Query(..., description="Text to search for in files"),
     max_results: int = Query(10, description="Maximum number of results to return")
 ):
+    print("Got request:", site_name, query)
     access_token = get_token_client_credentials()
+    print("Access token:", "YES" if access_token else "NO")
     if not access_token:
+        print("No access token!")
         return {"count": 0, "files": [], "message": "Authentication failed."}
 
-    # Hardcoded mapping
     site_id = SITE_NAME_TO_ID.get(site_name)
+    print("Resolved site_id:", site_id)
     if not site_id:
+        print("Unknown site name:", site_name)
         return {"count": 0, "files": [], "message": f"Unknown site name: {site_name}"}
 
     url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drive/root/search(q='{query}')"
+    print("Graph API URL:", url)
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.get(url, headers=headers)
+    print("Graph response:", response.status_code, response.text)
     if response.status_code != 200:
+        print("Search failed!")
         return {"count": 0, "files": [], "message": f"Search failed: {response.status_code} {response.text}"}
 
     items = response.json().get("value", [])
@@ -118,4 +125,5 @@ def search_files_in_site(
             "webUrl": item.get("webUrl")
         } for item in items
     ]
+    print("Returning", len(files), "files")
     return {"count": len(files), "files": files}

@@ -14,6 +14,10 @@ logger = setup_logger()
 
 GRAPH_URL = "https://graph.microsoft.com/v1.0"
 
+SITE_NAME_TO_ID = {
+    "Mazoo": "marwanmostafa.sharepoint.com,121f66a5-f7c5-4f4b-839a-74bd313275e4,78f6f561-fcb0-4138-bef1-7f119aabc8aa"
+}
+
 # ----------------------
 # Graph Search
 # ----------------------

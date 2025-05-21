@@ -75,3 +75,33 @@ def crawl_files(driveid: str, file_extension: str = None):
         return {"count": len(files), "files": files}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/search_site")
+async def search_files_in_site(
+    site_hostname: str,
+    site_path: str,
+    query: str,
+    max_results: int = 10
+):
+    access_token = get_token_client_credentials()
+    if not access_token:
+        return {"count": 0, "files": [], "message": "Authentication failed."}
+    site_id = resolve_sharepoint_site_id(site_hostname, site_path, access_token)
+    if not site_id:
+        return {"count": 0, "files": [], "message": "Site not found."}
+    # Now search driveItems in this site
+    url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drive/root/search(q='{query}')"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        return {"count": 0, "files": [], "message": "Search failed."}
+    data = response.json()
+    files = [
+        {
+            "name": item["name"],
+            "id": item["id"],
+            "webUrl": item["webUrl"]
+        }
+        for item in data.get("value", [])
+    ]
+    return {"count": len(files), "files": files}

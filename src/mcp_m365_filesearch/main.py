@@ -79,28 +79,31 @@ def crawl_files(driveid: str, file_extension: str = None):
 from .msgraph_util import SITE_NAME_TO_ID
 
 @app.get("/search_site")
-async def search_files_in_site(
-    site_name: str,
-    query: str,
-    max_results: int = 10
-):
+async def search_files_in_site(site_name: str, query: str, max_results: int = 10):
+    from .msgraph_util import SITE_NAME_TO_ID
     access_token = get_token_client_credentials()
+    print(f"site_name: {site_name}, access_token: {bool(access_token)}")
     if not access_token:
+        print("No access token!")
         return {"count": 0, "files": [], "message": "Authentication failed."}
     site_id = SITE_NAME_TO_ID.get(site_name)
+    print(f"Resolved site_id: {site_id}")
     if not site_id:
+        print(f"Unknown site name: {site_name}")
         return {"count": 0, "files": [], "message": f"Unknown site name: {site_name}"}
     url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drive/root/search(q='{query}')"
+    print(f"Graph URL: {url}")
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.get(url, headers=headers)
+    print(f"Graph response: {response.status_code} {response.text}")
     if response.status_code != 200:
         return {"count": 0, "files": [], "message": f"Search failed: {response.status_code} {response.text}"}
     data = response.json()
     files = [
         {
-            "name": item["name"],
-            "id": item["id"],
-            "webUrl": item["webUrl"]
+            "name": item.get("name"),
+            "id": item.get("id"),
+            "webUrl": item.get("webUrl")
         }
         for item in data.get("value", [])
     ]

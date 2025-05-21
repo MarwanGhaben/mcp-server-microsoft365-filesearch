@@ -227,3 +227,17 @@ def crawl_drive_items(access_token, drive_id, parent_id=None, file_extension=Non
         url = data.get("@odata.nextLink")
 
     return results
+
+def resolve_sharepoint_site_id(site_hostname, site_path, access_token):
+    """
+    Resolves a SharePoint site ID from its hostname and path.
+    Example: site_hostname='contoso.sharepoint.com', site_path='/sites/YourSiteName'
+    """
+    url = f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json().get("id")
+    else:
+        logger.error(f"Could not resolve site: {response.status_code} {response.text}")
+        return None

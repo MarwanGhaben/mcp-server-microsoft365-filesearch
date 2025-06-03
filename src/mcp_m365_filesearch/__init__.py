@@ -1,4 +1,8 @@
-# from mcp_m365_filesearch.server import server
+"""Package entry point for the Microsoft 365 search MCP server."""
+
+# Expose the FastMCP instance defined in ``server.py`` as ``server`` so that
+# ``mcp-m365-filesearch`` can be executed as a package.
+from .server import mcp as server
 import os
 import sys
 

@@ -67,8 +67,10 @@ def parse_search_response(search_results, file_type, file_extension):
                 file_name = resource.get("name", "")
                 file_url = resource.get("webUrl")
 
+                lower_name = file_name.lower()
                 if file_name and (
-                    file_type == "all" or any(file_name.endswith(f".{ext}") for ext in file_extension)
+                    file_type == "all"
+                    or any(lower_name.endswith(f".{ext.lower()}") for ext in file_extension)
                 ):
                     results.append({
                         "name": file_name,
